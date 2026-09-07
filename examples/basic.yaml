@@ -1,0 +1,16 @@
+version: 1
+report: text
+timeout: 10s
+compareStatus: true
+tests:
+  - name: public API response
+    baseline:
+      curl: 'curl -H "Authorization: Bearer ${BASELINE_TOKEN}" https://baseline.example.test/users/42'
+    candidate:
+      curl: 'curl -H "Authorization: Bearer ${CANDIDATE_TOKEN}" https://candidate.example.test/users/42'
+    include:
+      - user.id
+      - user.name
+      - items[*].price
+    exclude:
+      - user.updated_at
