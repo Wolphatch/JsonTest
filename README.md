@@ -1,6 +1,6 @@
 # json-test
 
-`json-test` is a small, dependency-light CLI that sequentially compares JSON returned by baseline and candidate curl requests. It compares objects recursively and arrays by index, reporting values, types, missing fields, lengths, and (by default) HTTP status codes.
+`json-test` is a small, dependency-light CLI that sequentially compares JSON returned by baseline and candidate curl requests. It compares objects recursively and, by default, arrays by index, reporting values, types, missing fields, lengths, and HTTP status codes.
 
 ## Build
 
@@ -30,7 +30,7 @@ json-test version
 
 ## Manifest
 
-See [`examples/basic.yaml`](examples/basic.yaml). `baseline` and `candidate` accept either a curl string or a mapping containing `curl`. Settings at the manifest level are defaults; case-level `timeout` and `compareStatus` override them. The default timeout is 30 seconds, default report is `text`, and status comparison defaults to true. Set `report: json` for deterministic, machine-readable output.
+See [`examples/basic.yaml`](examples/basic.yaml). `baseline` and `candidate` accept either a curl string or a mapping containing `curl`. Settings at the manifest level are defaults; case-level `timeout`, `compareStatus`, and `compareListOrder` override them. The default timeout is 30 seconds, default report is `text`, and status and list-order comparison both default to true. Set `compareListOrder: false` to treat arrays as unordered (including duplicate values). Set `report: json` for deterministic, machine-readable output.
 
 Includes are a whitelist. Excludes are a blacklist and always win. Dot paths select nested fields, and `[*]` selects every array element (for example, `items[*].price`). Numeric selectors such as `items[0].price` are also accepted.
 

@@ -119,6 +119,10 @@ func display(p []string) string {
 }
 
 func compareJSON(a, b []byte, includes, excludes []string) ([]Difference, error) {
+	return compareJSONWithListOrder(a, b, includes, excludes, true)
+}
+
+func compareJSONWithListOrder(a, b []byte, includes, excludes []string, compareListOrder bool) ([]Difference, error) {
 	var x, y any
 	if err := json.Unmarshal(a, &x); err != nil {
 		return nil, fmt.Errorf("baseline response is not JSON: %w", err)
@@ -135,16 +139,16 @@ func compareJSON(a, b []byte, includes, excludes []string) ([]Difference, error)
 		p, _ := parsePath(s)
 		ex = append(ex, p)
 	}
-	var ds []Difference
-	var walk func(any, any, []string)
-	walk = func(a, b any, p []string) {
+	var walk func(any, any, []string) []Difference
+	walk = func(a, b any, p []string) []Difference {
 		if excluded(ex, p) || !relevant(in, p) {
-			return
+			return nil
 		}
+		var ds []Difference
 		ta, tb := reflect.TypeOf(a), reflect.TypeOf(b)
 		if ta != tb {
 			ds = append(ds, Difference{display(p), "type_mismatch", typeName(a), typeName(b)})
-			return
+			return ds
 		}
 		switch av := a.(type) {
 		case map[string]any:
@@ -163,7 +167,7 @@ func compareJSON(a, b []byte, includes, excludes []string) ([]Difference, error)
 					}
 					continue
 				}
-				walk(av[k], v, np)
+				ds = append(ds, walk(av[k], v, np)...)
 			}
 			keys = keys[:0]
 			for k := range bv {
@@ -180,12 +184,48 @@ func compareJSON(a, b []byte, includes, excludes []string) ([]Difference, error)
 			}
 		case []any:
 			bv := b.([]any)
+			if !compareListOrder {
+				// Remove exact matches first. This makes reorder-only changes disappear,
+				// while leaving deterministic pairs for genuinely changed values.
+				used := make([]bool, len(bv))
+				unmatched := make([]int, 0, len(av))
+				for i := range av {
+					matched := false
+					for j := range bv {
+						if !used[j] && len(walk(av[i], bv[j], appendPath(p, strconv.Itoa(i)))) == 0 {
+							used[j], matched = true, true
+							break
+						}
+					}
+					if !matched {
+						unmatched = append(unmatched, i)
+					}
+				}
+				remaining := make([]int, 0, len(bv))
+				for j := range bv {
+					if !used[j] {
+						remaining = append(remaining, j)
+					}
+				}
+				n := len(unmatched)
+				if len(remaining) < n {
+					n = len(remaining)
+				}
+				for k := 0; k < n; k++ {
+					i := unmatched[k]
+					ds = append(ds, walk(av[i], bv[remaining[k]], appendPath(p, strconv.Itoa(i)))...)
+				}
+				if len(av) != len(bv) {
+					ds = append(ds, Difference{display(p), "array_length_mismatch", len(av), len(bv)})
+				}
+				return ds
+			}
 			n := len(av)
 			if len(bv) < n {
 				n = len(bv)
 			}
 			for i := 0; i < n; i++ {
-				walk(av[i], bv[i], appendPath(p, strconv.Itoa(i)))
+				ds = append(ds, walk(av[i], bv[i], appendPath(p, strconv.Itoa(i)))...)
 			}
 			if len(av) != len(bv) {
 				ds = append(ds, Difference{display(p), "array_length_mismatch", len(av), len(bv)})
@@ -195,9 +235,9 @@ func compareJSON(a, b []byte, includes, excludes []string) ([]Difference, error)
 				ds = append(ds, Difference{display(p), "value_mismatch", a, b})
 			}
 		}
+		return ds
 	}
-	walk(x, y, nil)
-	return ds, nil
+	return walk(x, y, nil), nil
 }
 func appendPath(p []string, s string) []string {
 	n := make([]string, len(p)+1)
