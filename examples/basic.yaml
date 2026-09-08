@@ -2,6 +2,7 @@ version: 1
 report: text
 timeout: 10s
 compareStatus: true
+compareListOrder: true
 tests:
   - name: public API response
     baseline:

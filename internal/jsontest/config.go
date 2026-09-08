@@ -34,20 +34,22 @@ func (r *Request) UnmarshalYAML(n *yaml.Node) error {
 }
 
 type Manifest struct {
-	Version       int      `yaml:"version"`
-	Report        string   `yaml:"report"`
-	Timeout       Duration `yaml:"timeout"`
-	CompareStatus *bool    `yaml:"compareStatus"`
-	Tests         []Case   `yaml:"tests"`
+	Version          int      `yaml:"version"`
+	Report           string   `yaml:"report"`
+	Timeout          Duration `yaml:"timeout"`
+	CompareStatus    *bool    `yaml:"compareStatus"`
+	CompareListOrder *bool    `yaml:"compareListOrder"`
+	Tests            []Case   `yaml:"tests"`
 }
 type Case struct {
-	Name          string   `yaml:"name"`
-	Baseline      Request  `yaml:"baseline"`
-	Candidate     Request  `yaml:"candidate"`
-	Include       []string `yaml:"include"`
-	Exclude       []string `yaml:"exclude"`
-	Timeout       Duration `yaml:"timeout"`
-	CompareStatus *bool    `yaml:"compareStatus"`
+	Name             string   `yaml:"name"`
+	Baseline         Request  `yaml:"baseline"`
+	Candidate        Request  `yaml:"candidate"`
+	Include          []string `yaml:"include"`
+	Exclude          []string `yaml:"exclude"`
+	Timeout          Duration `yaml:"timeout"`
+	CompareStatus    *bool    `yaml:"compareStatus"`
+	CompareListOrder *bool    `yaml:"compareListOrder"`
 }
 
 func Load(path string) (Manifest, error) {

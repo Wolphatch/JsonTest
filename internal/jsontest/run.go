@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+	"text/tabwriter"
 )
 
 type CaseResult struct {
@@ -47,7 +49,14 @@ func Run(m Manifest) Report {
 				if status && a.status != b.status {
 					cr.Differences = append(cr.Differences, Difference{"$status", "status_mismatch", a.status, b.status})
 				}
-				ds, e := compareJSON(a.body, b.body, c.Include, c.Exclude)
+				compareListOrder := true
+				if m.CompareListOrder != nil {
+					compareListOrder = *m.CompareListOrder
+				}
+				if c.CompareListOrder != nil {
+					compareListOrder = *c.CompareListOrder
+				}
+				ds, e := compareJSONWithListOrder(a.body, b.body, c.Include, c.Exclude, compareListOrder)
 				if e != nil {
 					cr.Error = e.Error()
 				} else {
@@ -79,9 +88,26 @@ func WriteText(w io.Writer, r Report) {
 		if c.Error != "" {
 			fmt.Fprintf(w, "  error: %s\n", c.Error)
 		}
-		for _, d := range c.Differences {
-			fmt.Fprintf(w, "  %s: %s (baseline=%v candidate=%v)\n", d.Path, d.Kind, d.Baseline, d.Candidate)
+		if len(c.Differences) > 0 {
+			const separator = "  -------------------------------------------------------------------------------\n"
+			fmt.Fprint(w, separator)
+			tw := tabwriter.NewWriter(w, 2, 4, 2, ' ', 0)
+			fmt.Fprintln(tw, "  PATH\tKIND\tBASELINE\tCANDIDATE")
+			fmt.Fprintln(tw, "  ----\t----\t--------\t---------")
+			for _, d := range c.Differences {
+				fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n", d.Path, d.Kind, displayValue(d.Baseline), displayValue(d.Candidate))
+			}
+			tw.Flush()
+			fmt.Fprint(w, separator)
 		}
 	}
 	fmt.Fprintf(w, "\n%d case(s), matched=%t\n", len(r.Cases), r.Matched)
+}
+
+func displayValue(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprint(v)
+	}
+	return strings.ReplaceAll(string(b), "\t", `\t`)
 }
