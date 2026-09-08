@@ -55,6 +55,27 @@ func TestCompareListOrderStillReportsChanges(t *testing.T) {
 	}
 }
 
+func TestCompareListOrderWithIndexFilter(t *testing.T) {
+	a := []byte(`{"items":[{"id":1},{"id":2}]}`)
+	b := []byte(`{"items":[{"id":2},{"id":1}]}`)
+
+	for _, filter := range []struct {
+		name     string
+		includes []string
+		excludes []string
+	}{
+		{name: "include", includes: []string{"items[1].id"}},
+		{name: "exclude", excludes: []string{"items[0].id"}},
+	} {
+		t.Run(filter.name, func(t *testing.T) {
+			d, err := compareJSONWithListOrder(a, b, filter.includes, filter.excludes, false)
+			if err != nil || len(d) != 0 {
+				t.Fatalf("err=%v differences=%#v", err, d)
+			}
+		})
+	}
+}
+
 func TestWriteTextTable(t *testing.T) {
 	r := Report{Cases: []CaseResult{{
 		Name: "different response",
