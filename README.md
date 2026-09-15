@@ -28,6 +28,36 @@ json-test version
 
 `run` exits 0 when every case matches, 1 on a difference/request failure, and 2 for invalid configuration or usage. `validate` parses paths and curl commands without making requests.
 
+### Run one test from a manifest
+
+`json-test run` runs every entry under `tests`; it does not select a test by its
+`name`. To run a specific test, make a focused manifest that keeps the manifest-level
+settings and only the desired test entry, then run that file:
+
+```yaml
+# focused.yaml
+version: 1
+report: text
+timeout: 10s
+compareStatus: true
+compareListOrder: true
+tests:
+  - name: public API response
+    baseline:
+      curl: 'curl https://baseline.example.test/users/42'
+    candidate:
+      curl: 'curl https://candidate.example.test/users/42'
+```
+
+```sh
+json-test validate focused.yaml
+json-test run focused.yaml
+```
+
+The test `name` labels its result and must be unique within the manifest; it is not
+a command-line filter. Keeping reusable test definitions in separate small manifest
+files can make repeatedly running individual comparisons easier.
+
 ## Manifest
 
 See [`examples/basic.yaml`](examples/basic.yaml). `baseline` and `candidate` accept either a curl string or a mapping containing `curl`. Settings at the manifest level are defaults; case-level `timeout`, `compareStatus`, and `compareListOrder` override them. The default timeout is 30 seconds, default report is `text`, and status and list-order comparison both default to true. Set `compareListOrder: false` to treat arrays as unordered (including duplicate values). Set `report: json` for deterministic, machine-readable output.
