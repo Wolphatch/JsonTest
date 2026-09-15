@@ -26,7 +26,9 @@ func TestExecuteRealCurl(t *testing.T) {
 		fmt.Fprint(w, `{"ok":true}`)
 	}))
 	defer s.Close()
-	r, e := execute("curl "+s.URL, 0)
+	// Hosted runners can inject proxy settings that make curl send even loopback
+	// requests through a proxy. Keep this integration test local and deterministic.
+	r, e := execute(`curl --noproxy "*" `+s.URL, 0)
 	if e != nil {
 		t.Fatal(e)
 	}
